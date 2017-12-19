@@ -8,7 +8,10 @@
 #include <string.h>
 
 #include "driver/spi_master.h"
+#include "driver/spi_common.h"
+
 #include "driver/i2c.h"
+#include "driver/gpio.h"
 
 #include "esp8266_wrapper.h"
 
@@ -19,6 +22,30 @@ uint32_t sdk_system_get_time ()
     struct timeval time;
     gettimeofday(&time,0);
     return time.tv_sec*1e6 + time.tv_usec;
+}
+
+bool gpio_isr_service_installed = false;
+bool auto_pull_up = false;
+bool auto_pull_down = true;
+
+esp_err_t gpio_set_interrupt(gpio_num_t gpio, gpio_int_type_t type, gpio_isr_t handler)
+{
+    if (!gpio_isr_service_installed)
+        gpio_isr_service_installed = (gpio_install_isr_service(0) == ESP_OK);
+
+    gpio_config_t gpio_cfg = {
+       .pin_bit_mask = ((uint64_t)(((uint64_t)1)<< gpio)),
+       .mode = GPIO_MODE_INPUT,
+       .pull_up_en = auto_pull_up,
+       .pull_down_en = auto_pull_down,
+       .intr_type = type
+    };
+    gpio_config(&gpio_cfg);
+
+    // set interrupt handler
+    gpio_isr_handler_add(gpio, handler, (void*)gpio);
+    
+    return ESP_OK;
 }
 
 #define I2C_ACK_VAL  0x0
@@ -91,6 +118,18 @@ int i2c_slave_read (uint8_t bus, uint8_t addr, const uint8_t *reg,
 #define SPI_MAX_CS  34  // GPIO 33 is the last port that can be used as output
 
 spi_device_handle_t spi_handles[SPI_MAX_CS] = { 0 };
+
+bool spi_bus_init (spi_host_device_t host, uint8_t sclk , uint8_t miso, uint8_t mosi)
+{
+    spi_bus_config_t spi_bus_cfg = {
+        .miso_io_num=miso,
+        .mosi_io_num=mosi,
+        .sclk_io_num=sclk,
+        .quadwp_io_num=-1,
+        .quadhd_io_num=-1
+    };
+    return (spi_bus_initialize(host, &spi_bus_cfg, 1) == ESP_OK);
+}
 
 bool spi_device_init (uint8_t bus, uint8_t cs)
 {
