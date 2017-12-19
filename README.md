@@ -153,9 +153,9 @@ The high pass filter can independently apply to
 
 - the raw output data,
 - the data used for click detection, and
-- the data used for inerrupt generation like wake-up, free fall or 6D/4D orientation detection.
+- the data used for interrupt generation like wake-up, free fall or 6D/4D orientation detection.
 
-The mode and the cutoff frequency of the high pass filter can be configured using function ```lis3dh_config_hpf```. ollowing HPF modes are available:
+The mode and the cutoff frequency of the high pass filter can be configured using function ```lis3dh_config_hpf```. Following HPF modes are available:
 
 Driver symbol | HPF mode
 :--------------|:---------
@@ -192,7 +192,7 @@ The FIFO mode can be set using function ```lis3dh_set_fifo_mode```. This functio
 - a threshold value which defines a watermark level, and
 - an interrupt source that is used in Stream-to-FIFO mode.
 
-The watermark level is used by the sensor to set a watermark flag and to generate optionally an interrupt when the FIFO content exceeds this level. They can be used to gather a minimum number of axes acceleratoin samples with the sensor before the data are fetched as a single read operation from the sensor.
+The watermark level is used by the sensor to set a watermark flag and to generate optionally an interrupt when the FIFO content exceeds this level. They can be used to gather a minimum number of axes acceleration samples with the sensor before the data are fetched as a single read operation from the sensor.
 
 ```
 ...
@@ -442,7 +442,7 @@ lis3dh_low_active | Interrupt signal is low active
 
 The LIS3DH sensor contains an auxiliary ADC with 3 separate dedicated inputs ADC1, ADC2, and ADC3. ADC3 can be connected to the internal temperatur sensor. The input range is 1200 ± 400 mV. The resolution of the A/D converter is 10 bit in normal and high-resolution mode, but only 8 bit in low-power mode. 
 
-ADC inputs can be activated and deactivated (default) with function ```lis3dh_enable_adc```. If parameter ```temp``` is true, ADC3 is connected to the internal temperatur sensor and provides the temperatur in degrees.
+ADC inputs can be activated and deactivated (default) with function ```lis3dh_enable_adc```. If parameter ```temp``` is true, ADC3 is connected to the internal temperature sensor and provides the temperature in degrees.
 
 ADC sampling rate is the same the output data rate (ODR). Results are given as left-aligned 16-bit signed integer values in 2’s complement. Function ```lis3dh_get_adc``` can be used to get the results.
 
@@ -1044,4 +1044,3 @@ void user_init(void)
     }
 }
 ```
-

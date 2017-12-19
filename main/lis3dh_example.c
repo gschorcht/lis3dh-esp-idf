@@ -39,11 +39,10 @@
  */
 
 // use following constants to define the example mode
-
-// #define SPI_USED
+// #define SPI_USED     // if defined SPI is used, otherwise I2C
    #define DATA_INT     // data ready and FIFO status interrupts
-// #define EVENT_INT    // wake-up, free fall or 6D/4D orientation detection 
 // #define CLICK_INT    // click detection interrupt
+// #define ACTIVITY_INT // wake-up, free fall or 6D/4D orientation detection 
    #define FIFO_MODE    // multiple sample read mode
 
 #include <string.h>
@@ -150,7 +149,7 @@ void read_data ()
         printf("%.3f LIS3DH num=%d\n", (double)sdk_system_get_time()*1e-3, num);
 
         for (int i=0; i < num; i++)
-            // max. full scale is +-16 g and resolution is 1 mg, i.e. 5 digits
+            // max. full scale is +-16 g and best resolution is 1 mg, i.e. 5 digits
             printf("%.3f LIS3DH (xyz)[g] ax=%+7.3f ay=%+7.3f az=%+7.3f\n",
                    (double)sdk_system_get_time()*1e-3, 
                    fifo[i].ax, fifo[i].ay, fifo[i].az);
@@ -162,7 +161,7 @@ void read_data ()
 
     if (lis3dh_new_data (sensor) &&
         lis3dh_get_float_data (sensor, &data))
-        // max. full scale is +-16 g and resolution is 1 mg, i.e. 5 digits
+        // max. full scale is +-16 g and best resolution is 1 mg, i.e. 5 digits
         printf("%.3f LIS3DH (xyz)[g] ax=%+7.3f ay=%+7.3f az=%+7.3f\n",
                (double)sdk_system_get_time()*1e-3, 
                 data.ax, data.ay, data.az);
@@ -171,7 +170,7 @@ void read_data ()
 }
 
 
-#if defined(DATA_INT) || defined(EVENT_INT) || defined(CLICK_INT)
+#if defined(DATA_INT) || defined(ACTIVITY_INT) || defined(CLICK_INT)
 /**
  * In this case, any of the possible interrupts on interrupt signal *INT1* is
  * used to fetch the data.
@@ -194,17 +193,17 @@ void user_task_interrupt (void *pvParameters)
     {
         if (xQueueReceive(gpio_evt_queue, &gpio_num, portMAX_DELAY))
         {
-            lis3dh_int_event_source_t event_src;
-            lis3dh_int_data_source_t  data_src;
-            lis3dh_int_click_source_t click_src;
+            lis3dh_int_activity_source_t activity_src;
+            lis3dh_int_data_source_t     data_src;
+            lis3dh_int_click_source_t    click_src;
 
             // get the source of the interrupt and reset INT signals
-            lis3dh_get_int_event_source (sensor, &event_src, lis3dh_int1_signal);
-            lis3dh_get_int_data_source  (sensor, &data_src);
-            lis3dh_get_int_click_source (sensor, &click_src);
+            lis3dh_get_int_activity_source (sensor, &activity_src, lis3dh_int1_signal);
+            lis3dh_get_int_data_source     (sensor, &data_src);
+            lis3dh_get_int_click_source    (sensor, &click_src);
     
-            // in case of DRDY interrupt or event interrupt read one data sample
-            if (data_src.data_ready || event_src.active)
+            // in case of DRDY interrupt or activity interrupt read one data sample
+            if (data_src.data_ready || activity_src.active)
                 read_data ();
    
             // in case of FIFO interrupts read the whole FIFO
@@ -224,9 +223,11 @@ void user_task_interrupt (void *pvParameters)
 static void IRAM_ATTR int_signal_handler(void* arg)
 {
     uint32_t gpio = (uint32_t) arg;
+
 #else  // ESP8266 (esp-open-rtos)
 void int_signal_handler (uint8_t gpio)
 {
+
 #endif
     // send an event with GPIO to the interrupt user task
     xQueueSendFromISR(gpio_evt_queue, &gpio, NULL);
@@ -240,7 +241,7 @@ void int_signal_handler (uint8_t gpio)
 
 void user_task_periodic(void *pvParameters)
 {
-    vTaskDelay (10);
+    vTaskDelay (100/portTICK_PERIOD_MS);
     
     while (1)
     {
@@ -248,7 +249,7 @@ void user_task_periodic(void *pvParameters)
         read_data ();
         
         // passive waiting until 1 second is over
-        vTaskDelay(100);
+        vTaskDelay(100/portTICK_PERIOD_MS);
     }
 }
 
@@ -274,40 +275,33 @@ void user_init(void)
     #ifdef SPI_USED
 
     // init the sensor connnected to SPI
-    #ifdef ESP_OPEN_RTOS
-    sensor = lis3dh_init_sensor (SPI_BUS, 0, SPI_CS_GPIO);
-    #else
-    spi_bus_config_t spi_bus_cfg = {
-        .miso_io_num=SPI_MISO_GPIO,
-        .mosi_io_num=SPI_MOSI_GPIO,
-        .sclk_io_num=SPI_SCK_GPIO,
-        .quadwp_io_num=-1,
-        .quadhd_io_num=-1
-    };
-    if (spi_bus_initialize(SPI_BUS, &spi_bus_cfg, 1) == ESP_OK)
-        sensor = lis3dh_init_sensor (SPI_BUS, 0, SPI_CS_GPIO);
+    #ifdef ESP_PLATFORM
+    spi_bus_init (SPI_BUS, SPI_SCK_GPIO, SPI_MISO_GPIO, SPI_MOSI_GPIO);
     #endif
+
+    // init the sensor connected to SPI_BUS with SPI_CS_GPIO as chip select.
+    sensor = lis3dh_init_sensor (SPI_BUS, 0, SPI_CS_GPIO);
     
     #else
 
     // init all I2C bus interfaces at which LIS3DH  sensors are connected
     i2c_init (I2C_BUS, I2C_SCL_PIN, I2C_SDA_PIN, I2C_FREQ);
     
-    // init the sensor with slave address LIS3DH_I2C_ADDRESS_2 connected I2C_BUS.
+    // init the sensor with slave address LIS3DH_I2C_ADDRESS_1 connected to I2C_BUS.
     sensor = lis3dh_init_sensor (I2C_BUS, LIS3DH_I2C_ADDRESS_1, 0);
 
     #endif
     
     if (sensor)
     {
-        // --- PLATFORM DEPENDENT PART ----
+        // --- SYSTEM CONFIGURATION PART ----
         
-        #if !defined(DATA_INT) && !defined(EVENT_INT) && !defined(CLICK_INT)
+        #if !defined(DATA_INT) && !defined(ACTIVITY_INT) && !defined(CLICK_INT)
 
         // create a user task that fetches data from sensor periodically
         xTaskCreate(user_task_periodic, "user_task_periodic", TASK_STACK_DEPTH, NULL, 2, NULL);
 
-        #else // INT1_USED || INT2_USED
+        #else // DATA_INT || ACTIVITY_INT || CLICK_INT
 
         // create a task that is triggered only in case of interrupts to fetch the data
         xTaskCreate(user_task_interrupt, "user_task_interrupt", TASK_STACK_DEPTH, NULL, 2, NULL);
@@ -315,29 +309,10 @@ void user_init(void)
         // create event queue
         gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
 
-        #ifdef ESP_PLATFORM  // ESP32 (ESP-IDF)
-        
-        // configure interupt pins for *INT1* and *INT2* signals
-        gpio_config_t gpio_cfg = {
-            .pin_bit_mask = ((uint64_t)(((uint64_t)1)<< INT1_PIN)),
-            .mode = GPIO_MODE_INPUT,
-            .pull_down_en = true,
-            .intr_type = GPIO_INTR_POSEDGE
-        };
-        gpio_config(&gpio_cfg);
-
-        // set interrupt handler
-        gpio_install_isr_service(0);
-        gpio_isr_handler_add(INT1_PIN, int_signal_handler, (void*)INT1_PIN);
-
-        #else  // ESP8266 (esp-open-rtos)
-
         // configure interupt pins for *INT1* and *INT2* signals and set the interrupt handler
         gpio_set_interrupt(INT1_PIN, GPIO_INTTYPE_EDGE_POS, int_signal_handler);
 
-        #endif  // ESP_PLATFORM 
-        
-        #endif  // !defined(INT1_USED) && !defined(INT2_USED)
+        #endif  // !defined(DATA_INT) && !defined(ACTIVITY_INT) && !defined(CLICK_INT)
         
         // -- SENSOR CONFIGURATION PART ---
 
@@ -348,8 +323,8 @@ void user_init(void)
         // lis3dh_config_int_signals (sensor, lis3dh_high_active);
 
         #ifdef DATA_INT
-        // enable data interrupts on INT1 (data ready or FIFO events)
-        // data ready and FIFO interrupts must not be enabled at the same time
+        // enable data interrupts on INT1 (data ready or FIFO status interrupts)
+        // data ready and FIFO status interrupts must not be enabled at the same time
         #ifdef FIFO_MODE
         lis3dh_enable_int_data (sensor, lis3dh_fifo_overrun, true);
         lis3dh_enable_int_data (sensor, lis3dh_fifo_watermark, true);
@@ -358,16 +333,16 @@ void user_init(void)
         #endif // FIFO_MODE
         #endif // DATA_INT
         
-        #ifdef EVENT_INT
+        #ifdef ACTIVITY_INT
         // enable data interrupts on INT1 
-        lis3dh_int_event_config_t act_config;
+        lis3dh_int_activity_config_t act_config;
     
-        act_config.event = lis3dh_wake_up;
-        // act_config.event = lis3dh_free_fall;
-        // act_config.event = lis3dh_6d_movement;
-        // act_config.event = lis3dh_6d_position;
-        // act_config.event = lis3dh_4d_movement;
-        // act_config.event = lis3dh_4d_position;
+        act_config.activity = lis3dh_wake_up;
+        // act_config.activity = lis3dh_free_fall;
+        // act_config.activity = lis3dh_6d_movement;
+        // act_config.activity = lis3dh_6d_position;
+        // act_config.activity = lis3dh_4d_movement;
+        // act_config.activity = lis3dh_4d_position;
         act_config.threshold = 10;
         act_config.x_low_enabled  = false;
         act_config.x_high_enabled = true;
@@ -378,8 +353,8 @@ void user_init(void)
         act_config.duration = 0;
         act_config.latch = true;
         
-        lis3dh_set_int_event_config (sensor, lis3dh_int1_signal, &act_config);
-        #endif // EVENT_INT
+        lis3dh_set_int_activity_config (sensor, lis3dh_int1_signal, &act_config);
+        #endif // ACTIVITY_INT
 
         #ifdef CLICK_INT
         // enable click interrupt on INT1
@@ -416,8 +391,6 @@ void user_init(void)
         // LAST STEP: Finally set scale and mode to start measurements
         lis3dh_set_scale(sensor, lis3dh_scale_2g);
         lis3dh_set_mode (sensor, lis3dh_odr_10, lis3dh_high_res, true, true, true);
-
-        vTaskDelay (20);
 
         // -- SENSOR CONFIGURATION PART ---
     }
