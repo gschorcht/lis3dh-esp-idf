@@ -30,7 +30,7 @@
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * ARE DISCLAIMED. IN NO Activity SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
  * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
  * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
@@ -119,9 +119,9 @@ typedef enum {
  
  
 /**
- * @brief   Event interrupt configuration for INT1/INT2 signals
+ * @brief   Activity interrupt configuration for INT1/INT2 signals
  *
- * Event interrupts are: axes movement wake-up, free-fall, 6D/4D detection.
+ * Activity interrupts are: axes movement wake-up, free-fall, 6D/4D detection.
  */
 typedef struct {
 
@@ -136,7 +136,7 @@ typedef struct {
         lis3dh_4d_movement,   // AOI = 0, 6D = 1, D4D = 1
         lis3dh_4d_position,   // AOI = 1, 6D = 1, D4D = 1
     
-    } event;            
+    } activity;            
 
     uint8_t  threshold;       // threshold used for comparison for all axes
 
@@ -154,26 +154,26 @@ typedef struct {
                               
     uint8_t  duration;        // duration in 1/ODR an interrupt condition has
                               // to be given before the interrupt is generated
-} lis3dh_int_event_config_t;
+} lis3dh_int_activity_config_t;
 
 
 /**
- * @brief   Event interrupt source type for interrupt signals INT1/INT2 
+ * @brief   Activity interrupt source type for interrupt signals INT1/INT2 
  */
 typedef struct {
 
-    bool    active:1;     // true - one ore more events occured
+    bool    active:1;     // true - one ore more activities occured
     
-    bool    x_low :1;     // true - x low event occured
-    bool    x_high:1;     // true - x high event occured
+    bool    x_low :1;     // true - x low activity occured
+    bool    x_high:1;     // true - x high activity occured
 
-    bool    y_low :1;     // true - z low event occured
-    bool    y_high:1;     // true - z high event occured
+    bool    y_low :1;     // true - z low activity occured
+    bool    y_high:1;     // true - z high activity occured
 
-    bool    z_low :1;     // true - z low event occured
-    bool    z_high:1;     // true - z high event occured
+    bool    z_low :1;     // true - z low activity occured
+    bool    z_high:1;     // true - z high activity occured
     
-} lis3dh_int_event_source_t;
+} lis3dh_int_activity_source_t;
 
 
 /**
@@ -243,7 +243,7 @@ typedef struct {
     bool    s_click:1;    // single click detected
     bool    d_click:1;    // double click detected
 
-    bool    active :1;    // true - one ore more events occured
+    bool    active :1;    // true - one ore more Activities occured
 
 } lis3dh_int_click_source_t;
 
@@ -303,7 +303,7 @@ typedef enum {
     lis3dh_hpf_normal = 0, // normal mode (reset by reading reference)
     lis3dh_hpf_reference,  // reference signal for filtering
     lis3dh_hpf_normal_x,   // normal mode
-    lis3dh_hpf_autoreset   // autoreset on interrupt event
+    lis3dh_hpf_autoreset   // autoreset on interrupt Activity
 
 } lis3dh_hpf_mode_t;
 

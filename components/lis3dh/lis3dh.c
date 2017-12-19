@@ -171,13 +171,13 @@ struct lis3dh_reg_ctrl2
 struct lis3dh_reg_ctrl3 
 {
     uint8_t unused     :1; // CTRL3<0>  unused
-    uint8_t I1_OVERRUN :1; // CTRL3<7>  FIFO Overrun interrupt on INT1
-    uint8_t I1_WTM1    :1; // CTRL3<6>  FIFO Watermark interrupt on INT1
-    uint8_t IT_DRDY2   :1; // CTRL3<5>  DRDY2 (ZYXDA) interrupt on INT1
+    uint8_t I1_OVERRUN :1; // CTRL3<1>  FIFO Overrun interrupt on INT1
+    uint8_t I1_WTM1    :1; // CTRL3<2>  FIFO Watermark interrupt on INT1
+    uint8_t IT_DRDY2   :1; // CTRL3<3>  DRDY2 (ZYXDA) interrupt on INT1
     uint8_t IT_DRDY1   :1; // CTRL3<4>  DRDY1 (321DA) interrupt on INT1
-    uint8_t I1_AOI2    :1; // CTRL3<3>  AOI2 interrupt on INT1
-    uint8_t I1_AOI1    :1; // CTRL3<2>  AOI1 interrupt on INT1
-    uint8_t I1_CLICK   :1; // CTRL3<1>  CLICK interrupt on INT1
+    uint8_t I1_AOI2    :1; // CTRL3<5>  AOI2 interrupt on INT1
+    uint8_t I1_AOI1    :1; // CTRL3<6>  AOI1 interrupt on INT1
+    uint8_t I1_CLICK   :1; // CTRL3<7>  CLICK interrupt on INT1
 };
 
 struct lis3dh_reg_ctrl4 
@@ -269,9 +269,6 @@ struct lis3dh_reg_click_cfg
 
 static bool    lis3dh_reset       (lis3dh_sensor_t* dev);
 static bool    lis3dh_is_available(lis3dh_sensor_t* dev);
-
-static bool    lis3dh_read_reg    (lis3dh_sensor_t* dev, uint8_t reg, uint8_t *data, uint16_t len);
-static bool    lis3dh_write_reg   (lis3dh_sensor_t* dev, uint8_t reg, uint8_t *data, uint16_t len);
 
 static bool    lis3dh_i2c_read    (lis3dh_sensor_t* dev, uint8_t reg, uint8_t *data, uint16_t len);
 static bool    lis3dh_i2c_write   (lis3dh_sensor_t* dev, uint8_t reg, uint8_t *data, uint16_t len);
@@ -490,7 +487,7 @@ bool lis3dh_new_data (lis3dh_sensor_t* dev)
  *       +-1g           1 mg/digit
  *       +-2g           2 mg/digit
  *       +-4g           4 mg/digit
- *      +-12g          16 mg/digit
+ *      +-16g          12 mg/digit
  */
 const static double  LIS3DH_SCALES[4] = { 0.001, 0.002, 0.004, 0.012 };
 
@@ -612,9 +609,9 @@ uint8_t lis3dh_get_raw_data_fifo (lis3dh_sensor_t* dev, lis3dh_raw_data_fifo_t r
 }
 
 
-bool lis3dh_set_int_event_config (lis3dh_sensor_t* dev,
-                                  lis3dh_int_signals_t signal,
-                                  lis3dh_int_event_config_t* config)
+bool lis3dh_set_int_activity_config (lis3dh_sensor_t* dev,
+                                     lis3dh_int_signals_t signal,
+                                     lis3dh_int_activity_config_t* config)
 {
     if (!dev || !config) return false;
 
@@ -633,7 +630,7 @@ bool lis3dh_set_int_event_config (lis3dh_sensor_t* dev,
     
     bool d4d_int = false;
     
-    switch (config->event)
+    switch (config->activity)
     {
         case lis3dh_wake_up     : intx_cfg.AOI = 0; intx_cfg.SIXD = 0; break;
         case lis3dh_free_fall   : intx_cfg.AOI = 1; intx_cfg.SIXD = 0; break;
@@ -686,9 +683,9 @@ bool lis3dh_set_int_event_config (lis3dh_sensor_t* dev,
 }
 
 
-bool lis3dh_get_int_event_config (lis3dh_sensor_t* dev,
-                                  lis3dh_int_signals_t signal,
-                                  lis3dh_int_event_config_t* config)
+bool lis3dh_get_int_activity_config (lis3dh_sensor_t* dev,
+                                     lis3dh_int_signals_t signal,
+                                     lis3dh_int_activity_config_t* config)
 {
     if (!dev || !config) return false;
 
@@ -736,29 +733,29 @@ bool lis3dh_get_int_event_config (lis3dh_sensor_t* dev,
     if (intx_cfg.AOI)
     {
         if (intx_cfg.SIXD && d4d_int)
-            config->event = lis3dh_4d_position;
+            config->activity = lis3dh_4d_position;
         else if (intx_cfg.SIXD && !d4d_int)
-            config->event = lis3dh_6d_position;
+            config->activity = lis3dh_6d_position;
         else
-            config->event = lis3dh_free_fall;
+            config->activity = lis3dh_free_fall;
     }
     else
     {
         if (intx_cfg.SIXD && d4d_int)
-            config->event = lis3dh_4d_movement;
+            config->activity = lis3dh_4d_movement;
         else if (intx_cfg.SIXD && !d4d_int)
-            config->event = lis3dh_6d_movement;
+            config->activity = lis3dh_6d_movement;
         else
-            config->event = lis3dh_wake_up;
+            config->activity = lis3dh_wake_up;
     }
 
     return true;
 }
 
 
-bool lis3dh_get_int_event_source (lis3dh_sensor_t* dev,
-                                  lis3dh_int_event_source_t* source, 
-                                  lis3dh_int_signals_t signal)
+bool lis3dh_get_int_activity_source (lis3dh_sensor_t* dev,
+                                     lis3dh_int_activity_source_t* source, 
+                                     lis3dh_int_signals_t signal)
 {
     if (!dev || !source) return false;
 
@@ -1123,7 +1120,7 @@ static bool lis3dh_reset (lis3dh_sensor_t* dev)
 }
 
 
-static bool lis3dh_read_reg(lis3dh_sensor_t* dev, uint8_t reg, uint8_t *data, uint16_t len)
+bool lis3dh_read_reg(lis3dh_sensor_t* dev, uint8_t reg, uint8_t *data, uint16_t len)
 {
     if (!dev || !data) return false;
 
@@ -1132,7 +1129,7 @@ static bool lis3dh_read_reg(lis3dh_sensor_t* dev, uint8_t reg, uint8_t *data, ui
 }
 
 
-static bool lis3dh_write_reg(lis3dh_sensor_t* dev, uint8_t reg, uint8_t *data, uint16_t len)
+bool lis3dh_write_reg(lis3dh_sensor_t* dev, uint8_t reg, uint8_t *data, uint16_t len)
 {
     if (!dev || !data) return false;
 

@@ -47,9 +47,13 @@
 // #define LIS3DH_DEBUG_LEVEL_1    // only error messages
 // #define LIS3DH_DEBUG_LEVEL_2    // debug and error messages
 
-// LIS3DH addresses
+// LIS3DH addresses (also used for LIS2DH, LIS2DH12 and LIS2DE12)
 #define LIS3DH_I2C_ADDRESS_1           0x18  // SDO pin is low
 #define LIS3DH_I2C_ADDRESS_2           0x19  // SDO pin is high
+
+// LIS3DE addresse (also used for LIS2DE)
+#define LIS3DE_I2C_ADDRESS_1           0x28  // SDO pin is low
+#define LIS3DE_I2C_ADDRESS_2           0x29  // SDO pin is high
 
 // LIS3DH chip id
 #define LIS3DH_CHIP_ID                 0x33  // LIS3DH_REG_WHO_AM_I<7:0>
@@ -106,7 +110,7 @@ extern "C"
 /**
  * @brief   Initialize the sensor
  *
- * Sensor is reset and put into sleep mode. All registers are reset to 
+ * Reset the sensor and switch to power down mode. All registers are reset to 
  * default values. FIFO is cleared.
  *
  * @param   bus     I2C or SPI bus at which LIS3DH sensor is connected
@@ -223,29 +227,29 @@ uint8_t lis3dh_get_raw_data_fifo (lis3dh_sensor_t* dev,
                                    
 
 /**
- * @brief   Set configuration for event (inertial) interrupt INT1/INT2 
+ * @brief   Set configuration for activity (inertial) interrupt INT1/INT2 
  *
  * Set the configuration for interrupts that are generated when a certain
- * angular rate is higher or lower than defined thresholds and one of the 
- * following events is recognized: wake-up, free fall or 6D/4D orientation
- * detection 
+ * acceleration is higher or lower than defined threshold and one of the 
+ * following activities are recognized: wake-up, free fall or 6D/4D
+ * orientation detection 
  *
  * @param   dev      pointer to the sensor device data structure
  * @param   signal   specifies the interrupt signal used in function
  * @param   config   configuration for the specified interrupt signal
  * @return           true on success, false on error
  */
-bool lis3dh_set_int_event_config (lis3dh_sensor_t* dev,
-                                  lis3dh_int_signals_t signal,
-                                  lis3dh_int_event_config_t* config);
+bool lis3dh_set_int_activity_config (lis3dh_sensor_t* dev,
+                                     lis3dh_int_signals_t signal,
+                                     lis3dh_int_activity_config_t* config);
 
 
 /**
- * @brief   Get cofiguration for event (inertial) interrupt INT1/INT2
+ * @brief   Get cofiguration for activity (inertial) interrupt INT1/INT2
  *
  * Get the configuration for interrupts that are generated when a certain
- * angular rate is higher or lower than defined thresholds and one of the 
- * following events is recognized: wake-up, free fall or 6D/4D orientation
+ * acceleration is higher or lower than defined threshold and one of the 
+ * following activities is recognized: wake-up, free fall or 6D/4D orientation
  * detection 
  *
  * @param   dev      pointer to the sensor device data structure
@@ -253,15 +257,15 @@ bool lis3dh_set_int_event_config (lis3dh_sensor_t* dev,
  * @param   config   configuration for the specified interrupt signal
  * @return           true on success, false on error
  */
-bool lis3dh_get_int_event_config (lis3dh_sensor_t* dev,
-                                  lis3dh_int_signals_t signal,
-                                  lis3dh_int_event_config_t* config);
+bool lis3dh_get_int_activity_config (lis3dh_sensor_t* dev,
+                                     lis3dh_int_signals_t signal,
+                                     lis3dh_int_activity_config_t* config);
 
 
 /**
- * @brief   Get the source of the event (inertial) interrupt INT1/INT2
+ * @brief   Get the source of the activity (inertial) interrupt INT1/INT2
  *
- * Returns a byte with flags that indicate the event which triggered
+ * Returns a byte with flags that indicate the activity which triggered
  * the interrupt signal (see INTx_SRC register in datasheet for details)
  *
  * @param   dev      pointer to the sensor device data structure
@@ -269,16 +273,16 @@ bool lis3dh_get_int_event_config (lis3dh_sensor_t* dev,
  * @param   signal   specifies the interrupt signal used in function
  * @return           true on success, false on error
  */
-bool lis3dh_get_int_event_source (lis3dh_sensor_t* dev,
-                                  lis3dh_int_event_source_t* source, 
-                                  lis3dh_int_signals_t signal);
+bool lis3dh_get_int_activity_source (lis3dh_sensor_t* dev,
+                                     lis3dh_int_activity_source_t* source, 
+                                     lis3dh_int_signals_t signal);
 
 
 /**
  * @brief   Enable/disable an data interrupt on signal INT1
  *
  * Enables or diables interrupts that are generated either when data are 
- * ready to read or FIFO events like overrun an watermark happen.
+ * ready to read or FIFO activities like overrun an watermark happen.
  *
  * @param   dev      pointer to the sensor device data structure
  * @param   type     type of interrupt to be enabled/disabled
@@ -286,7 +290,7 @@ bool lis3dh_get_int_event_source (lis3dh_sensor_t* dev,
  * @return           true on success, false on error
  */
 bool lis3dh_enable_int_data (lis3dh_sensor_t* dev, 
-                              lis3dh_int_data_t type, bool value);
+                             lis3dh_int_data_t type, bool value);
                                    
 
 /**
@@ -422,6 +426,41 @@ int8_t lis3dh_enable_adc (lis3dh_sensor_t* dev, bool enable, bool temp);
 bool lis3dh_get_adc (lis3dh_sensor_t* dev,
                      uint16_t* adc1, uint16_t* adc2, uint16_t* adc3);
 
+// ---- Low level interface functions -----------------------------
+
+/**
+ * @brief   Direct write to register
+ *
+ * PLEASE NOTE: This function should only be used to do something special that
+ * is not covered by the high level interface AND if you exactly know what you
+ * do and what effects it might have. Please be aware that it might affect the
+ * high level interface.
+ *
+ * @param   dev      pointer to the sensor device data structure
+ * @param   reg      address of the first register to be changed
+ * @param   data     pointer to the data to be written to the register
+ * @param   len      number of bytes to be written to the register
+ * @return           true on success, false on error
+ */
+bool lis3dh_write_reg (lis3dh_sensor_t* dev, 
+                       uint8_t reg, uint8_t *data, uint16_t len);
+
+/**
+ * @brief   Direct read from register
+ *
+ * PLEASE NOTE: This function should only be used to do something special that
+ * is not covered by the high level interface AND if you exactly know what you
+ * do and what effects it might have. Please be aware that it might affect the
+ * high level interface.
+ *
+ * @param   dev      pointer to the sensor device data structure
+ * @param   reg      address of the first register to be read
+ * @param   data     pointer to the data to be read from the register
+ * @param   len      number of bytes to be read from the register
+ * @return           true on success, false on error
+ */
+bool lis3dh_read_reg (lis3dh_sensor_t* dev, 
+                      uint8_t reg, uint8_t *data, uint16_t len);
 
 #ifdef __cplusplus
 }
