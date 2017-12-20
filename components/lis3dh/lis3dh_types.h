@@ -10,7 +10,7 @@
  *
  * The BSD License (3-clause license)
  *
- * Copyright (c) 2017 Gunar Schorcht (https://github.com/gschorcht]
+ * Copyright (c) 2017 Gunar Schorcht (https://github.com/gschorcht)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

@@ -28,7 +28,9 @@ bool gpio_isr_service_installed = false;
 bool auto_pull_up = false;
 bool auto_pull_down = true;
 
-esp_err_t gpio_set_interrupt(gpio_num_t gpio, gpio_int_type_t type, gpio_isr_t handler)
+esp_err_t gpio_set_interrupt(gpio_num_t gpio, 
+                             gpio_int_type_t type, 
+                             gpio_interrupt_handler_t handler)
 {
     if (!gpio_isr_service_installed)
         gpio_isr_service_installed = (gpio_install_isr_service(0) == ESP_OK);
@@ -43,10 +45,23 @@ esp_err_t gpio_set_interrupt(gpio_num_t gpio, gpio_int_type_t type, gpio_isr_t h
     gpio_config(&gpio_cfg);
 
     // set interrupt handler
-    gpio_isr_handler_add(gpio, handler, (void*)gpio);
+    gpio_isr_handler_add(gpio, (gpio_isr_t)handler, (void*)gpio);
     
     return ESP_OK;
 }
+
+void gpio_enable (gpio_num_t gpio, const gpio_mode_t mode)
+{
+    gpio_config_t gpio_cfg = {
+       .pin_bit_mask = ((uint64_t)(((uint64_t)1)<< gpio)),
+       .mode = mode,
+       .pull_up_en = auto_pull_up,
+       .pull_down_en = auto_pull_down,
+    };
+    gpio_config(&gpio_cfg);
+}
+
+// esp-open-rtos I2C interface wrapper
 
 #define I2C_ACK_VAL  0x0
 #define I2C_NACK_VAL 0x1
@@ -112,7 +127,7 @@ int i2c_slave_read (uint8_t bus, uint8_t addr, const uint8_t *reg,
     return err;
 }
 
-// SPI interface wrapper
+// esp-open-rtos SPI interface wrapper
 
 #define SPI_MAX_BUS 3   // ESP32 features three SPIs (SPI, HSPI and VSPI)
 #define SPI_MAX_CS  34  // GPIO 33 is the last port that can be used as output

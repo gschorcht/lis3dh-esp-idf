@@ -10,7 +10,7 @@
  *
  * The BSD License (3-clause license)
  *
- * Copyright (c) 2017 Gunar Schorcht (https://github.com/gschorcht]
+ * Copyright (c) 2017 Gunar Schorcht (https://github.com/gschorcht)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -91,15 +91,8 @@
 #define LIS3DH_SENSOR_IN_FIFO_MODE        (15 << 8)
 #define LIS3DH_ODR_TOO_HIGH               (16 << 8)
 
-#if defined(ESP_PLATFORM) || defined(__linux__)
+#include "lis3dh_platform.h"
 #include "lis3dh_types.h"
-#else // ESP8266 (esp-open-rtos)
-#include "lis3dh/lis3dh_types.h"
-#endif
-
-#ifdef ESP_PLATFORM  // ESP32 (ESP-IDF)
-#include "driver/spi_master.h"
-#endif
 
 #ifdef __cplusplus
 extern "C"

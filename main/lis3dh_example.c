@@ -5,37 +5,27 @@
  *
  * Harware configuration:
  *
- *   I2C   +-------------------------+     +----------+
- *         | ESP8266  Bus 0          |     | LIS3DH   |
- *         |          GPIO 5 (SCL)   ------> SCL      |
- *         |          GPIO 4 (SDA)   ------- SDA      |
- *         |          GPIO 13        <------ INT1     |
- *         +-------------------------+     +----------+
+ *   I2C
  *
- *         +-------------------------+     +----------+
- *         | ESP32    Bus 0          |     | LIS3DH   |
- *         |          GPIO 16 (SCL)  >-----> SCL      |
- *         |          GPIO 17 (SDA)  ------- SDA      |
- *         |          GPIO 22        <------ INT1     |
- *         +-------------------------+     +----------+
+ *   +---------------+   +----------+       +---------------+   +----------+
+ *   | ESP8266       |   | LIS3DH   |       | ESP32         |   | LIS3DH   |
+ *   |               |   |          |       |               |   |          |
+ *   | GPIO 5 (SCL)  ----> SCL      |       | GPIO 16 (SCL) ----> SCL      |
+ *   | GPIO 4 (SDA)  <---> SDA      |       | GPIO 17 (SDA) <---> SDA      |
+ *   | GPIO 13       <---- INT1     |       | GPIO 22       <---- INT1     |
+ *   +---------------+   +----------+       +---------------+   +----------+
  *
- *   SPI   +-------------------------+     +----------+
- *         | ESP8266  Bus 1          |     | LIS3DH   |
- *         |          GPIO 14 (SCK)  ------> SCK      |
- *         |          GPIO 13 (MOSI) ------> SDI      |
- *         |          GPIO 12 (MISO) <------ SDO      |
- *         |          GPIO 2  (CS)   ------> CS       |
- *         |          GPIO 5         <------ INT1     |
- *         +-------------------------+     +----------+
+ *   SPI   
  *
- *         +-------------------------+     +----------+
- *         | ESP32    Bus 0          |     | LIS3DH   |
- *         |          GPIO 16 (SCK)  ------> SCK      |
- *         |          GPIO 17 (MOSI) ------> SDI      |
- *         |          GPIO 18 (MISO) <------ SDO      |
- *         |          GPIO 19 (CS)   ------> CS       |
- *         |          GPIO 22        <------ INT1     |
- *         +-------------------------+     +----------+
+ *   +---------------+   +----------+        +---------------+   +----------+
+ *   | ESP8266       |   | LIS3DH   |        | ESP32         |   | LIS3DH   |
+ *   |               |   |          |        |               |   |          |
+ *   | GPIO 14 (SCK) ----> SCK      |        | GPIO 16 (SCK) ----> SCK      |
+ *   | GPIO 13 (MOSI)----> SDI      |        | GPIO 17 (MOSI)----> SDI      |
+ *   | GPIO 12 (MISO)<---- SDO      |        | GPIO 18 (MISO)<---- SDO      |
+ *   | GPIO 2  (CS)  ----> CS       |        | GPIO 19 (CS)  ----> CS       |
+ *   | GPIO 5        <---- INT1     |        | GPIO 22       <---- INT1     |
+ *   +---------------+    +---------+        +---------------+   +----------+
  */
 
 // use following constants to define the example mode
@@ -43,41 +33,16 @@
    #define DATA_INT     // data ready and FIFO status interrupts
 // #define CLICK_INT    // click detection interrupt
 // #define ACTIVITY_INT // wake-up, free fall or 6D/4D orientation detection 
-   #define FIFO_MODE    // multiple sample read mode
+// #define FIFO_MODE    // multiple sample read mode
+
+#if defined(DATA_INT) || defined(ACTIVITY_INT) || defined(CLICK_INT)
+#define INT_USED
+#endif
+
+/* -- includes ----------------------------------------------------- */
 
 #include <string.h>
-
-/* -- platform dependent includes ----------------------------- */
-
-#ifdef ESP_PLATFORM  // ESP32 (ESP-IDF)
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-
-#include "driver/gpio.h"
-#include "esp8266_wrapper.h"
-
 #include "lis3dh.h"
-
-#else  // ESP8266 (esp-open-rtos)
-
-#define TASK_STACK_DEPTH 256
-
-#include <stdio.h>
-
-#include "espressif/esp_common.h"
-#include "espressif/sdk_private.h"
-
-#include "esp/uart.h"
-#include "i2c/i2c.h"
-
-#include "FreeRTOS.h"
-#include "task.h"
-#include "queue.h"
-
-#include "lis3dh/lis3dh.h"
-
-#endif  // ESP_PLATFORM
 
 /** -- platform dependent definitions ------------------------------ */
 
@@ -170,7 +135,7 @@ void read_data ()
 }
 
 
-#if defined(DATA_INT) || defined(ACTIVITY_INT) || defined(CLICK_INT)
+#ifdef INT_USED
 /**
  * In this case, any of the possible interrupts on interrupt signal *INT1* is
  * used to fetch the data.
@@ -219,21 +184,12 @@ void user_task_interrupt (void *pvParameters)
 
 // Interrupt handler which resumes user_task_interrupt on interrupt
 
-#ifdef ESP_PLATFORM  // ESP32 (ESP-IDF)
-static void IRAM_ATTR int_signal_handler(void* arg)
+void IRAM int_signal_handler (uint8_t gpio)
 {
-    uint32_t gpio = (uint32_t) arg;
-
-#else  // ESP8266 (esp-open-rtos)
-void int_signal_handler (uint8_t gpio)
-{
-
-#endif
-    // send an event with GPIO to the interrupt user task
     xQueueSendFromISR(gpio_evt_queue, &gpio, NULL);
 }
 
-#else
+#else // !INT_USED
 
 /*
  * In this example, user task fetches the sensor values every seconds.
@@ -253,21 +209,15 @@ void user_task_periodic(void *pvParameters)
     }
 }
 
-#endif
+#endif // INT_USED
 
 /* -- main program ---------------------------------------------- */
 
-#ifdef ESP_PLATFORM  // ESP32 (ESP-IDF)
-void app_main()
-#else  // ESP8266 (esp-open-rtos)
 void user_init(void)
-#endif
 {
-    #ifdef ESP_OPEN_RTOS  // ESP8266
     // Set UART Parameter.
     uart_set_baud(0, 115200);
-    #endif
-
+    // Give the UART some time to settle
     vTaskDelay(1);
 
     /** -- MANDATORY PART -- */
@@ -275,9 +225,7 @@ void user_init(void)
     #ifdef SPI_USED
 
     // init the sensor connnected to SPI
-    #ifdef ESP_PLATFORM
     spi_bus_init (SPI_BUS, SPI_SCK_GPIO, SPI_MISO_GPIO, SPI_MOSI_GPIO);
-    #endif
 
     // init the sensor connected to SPI_BUS with SPI_CS_GPIO as chip select.
     sensor = lis3dh_init_sensor (SPI_BUS, 0, SPI_CS_GPIO);
@@ -296,23 +244,24 @@ void user_init(void)
     {
         // --- SYSTEM CONFIGURATION PART ----
         
-        #if !defined(DATA_INT) && !defined(ACTIVITY_INT) && !defined(CLICK_INT)
+        #if !defined (INT_USED)
 
         // create a user task that fetches data from sensor periodically
         xTaskCreate(user_task_periodic, "user_task_periodic", TASK_STACK_DEPTH, NULL, 2, NULL);
 
-        #else // DATA_INT || ACTIVITY_INT || CLICK_INT
+        #else // INT_USED
 
         // create a task that is triggered only in case of interrupts to fetch the data
         xTaskCreate(user_task_interrupt, "user_task_interrupt", TASK_STACK_DEPTH, NULL, 2, NULL);
 
         // create event queue
-        gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
+        gpio_evt_queue = xQueueCreate(10, sizeof(uint8_t));
 
         // configure interupt pins for *INT1* and *INT2* signals and set the interrupt handler
+        gpio_enable(INT1_PIN, GPIO_INPUT);
         gpio_set_interrupt(INT1_PIN, GPIO_INTTYPE_EDGE_POS, int_signal_handler);
 
-        #endif  // !defined(DATA_INT) && !defined(ACTIVITY_INT) && !defined(CLICK_INT)
+        #endif  // !defined(INT_USED)
         
         // -- SENSOR CONFIGURATION PART ---
 

@@ -472,7 +472,7 @@ Following figure shows a possible hardware configuration for ESP8266 and ESP32 i
   | ESP8266         |     | LIS3DH |              | ESP32           |     | LIS3DH |
   |                 |     |        |              |                 |     |        |
   |   GPIO 5 (SCL)  >-----> SCL    |              |   GPIO 16 (SCL) >-----> SCL    |
-  |   GPIO 4 (SDA)  ------- SDA    |              |   GPIO 17 (SDA) ------- SDA    |
+  |   GPIO 4 (SDA)  <-----> SDA    |              |   GPIO 17 (SDA) <-----> SDA    |
   |   GPIO 13       <------ INT1   |              |   GPIO 22       <------ INT1   |
   |   GPIO 12       <------ INT2   |              |   GPIO 23       <------ INT2   |
   +-----------------+     +--------+              +-----------------+     +--------+

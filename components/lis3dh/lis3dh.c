@@ -50,30 +50,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-#if !defined(ESP_PLATFORM) && !defined(__linux__) && !defined(ESP_OPEN_RTOS)
-#define ESP_OPEN_RTOS 1
-#endif
-
-#ifdef ESP_OPEN_RTOS  // ESP8266
-#include "FreeRTOS.h"
-#include "task.h"
-#include "espressif/esp_common.h"
-#include "espressif/sdk_private.h"
-#include "esp/spi.h"
-#include "i2c/i2c.h"
-
-#elif ESP_PLATFORM  // ESP32 (ESP-IDF)
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/semphr.h"
-#include "esp8266_wrapper.h"
-#include <errno.h>
-
-#else  // __linux__
-#include "esp8266_wrapper.h"
-#include <errno.h>
-#endif
-
 #include "lis3dh.h"
 
 #if defined(LIS3DH_DEBUG_LEVEL_2)
@@ -274,41 +250,6 @@ static bool    lis3dh_i2c_read    (lis3dh_sensor_t* dev, uint8_t reg, uint8_t *d
 static bool    lis3dh_i2c_write   (lis3dh_sensor_t* dev, uint8_t reg, uint8_t *data, uint16_t len);
 static bool    lis3dh_spi_read    (lis3dh_sensor_t* dev, uint8_t reg, uint8_t *data, uint16_t len);
 static bool    lis3dh_spi_write   (lis3dh_sensor_t* dev, uint8_t reg, uint8_t *data, uint16_t len);
-
-// platform dependent SPI interface functions
-#ifdef ESP_OPEN_RTOS
-static const spi_settings_t bus_settings = {
-    .mode         = SPI_MODE3,
-    .freq_divider = SPI_FREQ_DIV_1M,
-    .msb          = true,
-    .minimal_pins = false,
-    .endianness   = SPI_LITTLE_ENDIAN
-};
-
-static bool spi_device_init (uint8_t bus, uint8_t cs)
-{
-    gpio_enable(cs, GPIO_OUTPUT);
-    gpio_write (cs, true);
-    return true;
-}
-
-static size_t spi_transfer_pf(uint8_t bus, uint8_t cs, const uint8_t *mosi, uint8_t *miso, uint16_t len)
-{
-    spi_settings_t old_settings;
-
-    spi_get_settings(bus, &old_settings);
-    spi_set_settings(bus, &bus_settings);
-    gpio_write(cs, false);
-
-    size_t transfered = spi_transfer (bus, (const void*)mosi, (void*)miso, len, SPI_8BIT);
-
-    gpio_write(cs, true);
-    spi_set_settings(bus, &old_settings);
-    
-    return transfered;
-}
-
-#endif
 
 #define msb_lsb_to_type(t,b,o) (t)(((t)b[o] << 8) | b[o+1])
 #define lsb_msb_to_type(t,b,o) (t)(((t)b[o+1] << 8) | b[o])
