@@ -3,7 +3,7 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := l3gd20h
+PROJECT_NAME := lis3dh
 
 include $(IDF_PATH)/make/project.mk
 

@@ -39,11 +39,11 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
+ 
 /**
  * Platform file: platform specific definitions, includes and functions
  */
- 
+
 #ifndef __LIS3DH_PLATFORM_H__
 #define __LIS3DH_PLATFORM_H__
 

@@ -7,30 +7,31 @@
  *
  *   I2C
  *
- *   +---------------+   +----------+       +---------------+   +----------+
- *   | ESP8266       |   | LIS3DH   |       | ESP32         |   | LIS3DH   |
- *   |               |   |          |       |               |   |          |
- *   | GPIO 5 (SCL)  ----> SCL      |       | GPIO 16 (SCL) ----> SCL      |
- *   | GPIO 4 (SDA)  <---> SDA      |       | GPIO 17 (SDA) <---> SDA      |
- *   | GPIO 13       <---- INT1     |       | GPIO 22       <---- INT1     |
- *   +---------------+   +----------+       +---------------+   +----------+
+ *   +-----------------+   +----------+
+ *   | ESP8266 / ESP32 |   | LIS3DH   |
+ *   |                 |   |          |
+ *   |   GPIO 14 (SCL) ----> SCL      |
+ *   |   GPIO 13 (SDA) <---> SDA      |
+ *   |   GPIO 5        <---- INT1     |
+ *   +-----------------+   +----------+
  *
  *   SPI   
  *
- *   +---------------+   +----------+        +---------------+   +----------+
- *   | ESP8266       |   | LIS3DH   |        | ESP32         |   | LIS3DH   |
- *   |               |   |          |        |               |   |          |
- *   | GPIO 14 (SCK) ----> SCK      |        | GPIO 16 (SCK) ----> SCK      |
- *   | GPIO 13 (MOSI)----> SDI      |        | GPIO 17 (MOSI)----> SDI      |
- *   | GPIO 12 (MISO)<---- SDO      |        | GPIO 18 (MISO)<---- SDO      |
- *   | GPIO 2  (CS)  ----> CS       |        | GPIO 19 (CS)  ----> CS       |
- *   | GPIO 5        <---- INT1     |        | GPIO 22       <---- INT1     |
- *   +---------------+    +---------+        +---------------+   +----------+
+ *   +-----------------+   +----------+      +-----------------+   +----------+
+ *   | ESP8266         |   | LIS3DH   |      | ESP32           |   | LIS3DH   |
+ *   |                 |   |          |      |                 |   |          |
+ *   |   GPIO 14 (SCK) ----> SCK      |      |   GPIO 16 (SCK) ----> SCK      |
+ *   |   GPIO 13 (MOSI)----> SDI      |      |   GPIO 17 (MOSI)----> SDI      |
+ *   |   GPIO 12 (MISO)<---- SDO      |      |   GPIO 18 (MISO)<---- SDO      |
+ *   |   GPIO 2  (CS)  ----> CS       |      |   GPIO 19 (CS)  ----> CS       |
+ *   |   GPIO 5        <---- INT1     |      |   GPIO 5        <---- INT1     |
+ *   +-----------------+    +---------+      +-----------------+   +----------+
  */
 
-// use following constants to define the example mode
+/* -- use following constants to define the example mode ----------- */
+
 // #define SPI_USED     // if defined SPI is used, otherwise I2C
-   #define DATA_INT     // data ready and FIFO status interrupts
+// #define DATA_INT     // data ready and FIFO status interrupts
 // #define CLICK_INT    // click detection interrupt
 // #define ACTIVITY_INT // wake-up, free fall or 6D/4D orientation detection 
 // #define FIFO_MODE    // multiple sample read mode
@@ -41,60 +42,47 @@
 
 /* -- includes ----------------------------------------------------- */
 
-#include <string.h>
 #include "lis3dh.h"
 
 /** -- platform dependent definitions ------------------------------ */
 
 #ifdef ESP_PLATFORM  // ESP32 (ESP-IDF)
 
-// user task stack depth
-#define TASK_STACK_DEPTH 4096
+// user task stack depth for ESP32
+#define TASK_STACK_DEPTH 2048
 
-// define SPI interface for LIS3DH  sensors
+// SPI interface definitions for ESP32
 #define SPI_BUS       HSPI_HOST
 #define SPI_SCK_GPIO  16
 #define SPI_MOSI_GPIO 17
 #define SPI_MISO_GPIO 18
 #define SPI_CS_GPIO   19
 
-// define I2C interfaces for LIS3DH  sensors
-#define I2C_BUS       0
-#define I2C_SCL_PIN   16
-#define I2C_SDA_PIN   17
-#define I2C_FREQ      400000
-
-// define GPIOs for interrupt
-#define INT1_PIN      22
-#define INT2_PIN      23
-
 #else  // ESP8266 (esp-open-rtos)
 
-// user task stack depth
+// user task stack depth for ESP8266
 #define TASK_STACK_DEPTH 256
 
-// define SPI interface for LIS3DH  sensors
+// SPI interface definitions for ESP8266
 #define SPI_BUS       1
+#define SPI_SCK_GPIO  14
+#define SPI_MOSI_GPIO 13
+#define SPI_MISO_GPIO 12
 #define SPI_CS_GPIO   2   // GPIO 15, the default CS of SPI bus 1, can't be used
-
-// define I2C interfaces for LIS3DH  sensors
-#define I2C_BUS       0
-#define I2C_SCL_PIN   5
-#define I2C_SDA_PIN   4
-#define I2C_FREQ      I2C_FREQ_100K
-
-// define GPIOs for interrupt
-#ifdef SPI_USED
-#define INT1_PIN      5
-#define INT2_PIN      4
-#else
-#define INT1_PIN      13
-#define INT2_PIN      12
-#endif  // SPI_USED
 
 #endif  // ESP_PLATFORM
 
-/* -- user tasks ---------------------------------------------- */
+// I2C interface defintions for ESP32 and ESP8266
+#define I2C_BUS       0
+#define I2C_SCL_PIN   14
+#define I2C_SDA_PIN   13
+#define I2C_FREQ      I2C_FREQ_100K
+
+// interrupt GPIOs defintions for ESP8266 and ESP32
+#define INT1_PIN      5
+#define INT2_PIN      4
+
+/* -- user tasks --------------------------------------------------- */
 
 static lis3dh_sensor_t* sensor;
 
@@ -152,7 +140,7 @@ static QueueHandle_t gpio_evt_queue = NULL;
 
 void user_task_interrupt (void *pvParameters)
 {
-    uint32_t gpio_num;
+    uint8_t gpio_num;
 
     while (1)
     {
@@ -186,6 +174,7 @@ void user_task_interrupt (void *pvParameters)
 
 void IRAM int_signal_handler (uint8_t gpio)
 {
+    // send an event with GPIO to the interrupt user task
     xQueueSendFromISR(gpio_evt_queue, &gpio, NULL);
 }
 
@@ -211,7 +200,7 @@ void user_task_periodic(void *pvParameters)
 
 #endif // INT_USED
 
-/* -- main program ---------------------------------------------- */
+/* -- main program ------------------------------------------------- */
 
 void user_init(void)
 {
