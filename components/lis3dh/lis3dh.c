@@ -550,9 +550,9 @@ uint8_t lis3dh_get_raw_data_fifo (lis3dh_sensor_t* dev, lis3dh_raw_data_fifo_t r
 }
 
 
-bool lis3dh_set_int_activity_config (lis3dh_sensor_t* dev,
-                                     lis3dh_int_signals_t signal,
-                                     lis3dh_int_activity_config_t* config)
+bool lis3dh_set_int_event_config (lis3dh_sensor_t* dev,
+                                  lis3dh_int_event_config_t* config,
+                                  lis3dh_int_signals_t signal)
 {
     if (!dev || !config) return false;
 
@@ -571,7 +571,7 @@ bool lis3dh_set_int_activity_config (lis3dh_sensor_t* dev,
     
     bool d4d_int = false;
     
-    switch (config->activity)
+    switch (config->mode)
     {
         case lis3dh_wake_up     : intx_cfg.AOI = 0; intx_cfg.SIXD = 0; break;
         case lis3dh_free_fall   : intx_cfg.AOI = 1; intx_cfg.SIXD = 0; break;
@@ -624,9 +624,9 @@ bool lis3dh_set_int_activity_config (lis3dh_sensor_t* dev,
 }
 
 
-bool lis3dh_get_int_activity_config (lis3dh_sensor_t* dev,
-                                     lis3dh_int_signals_t signal,
-                                     lis3dh_int_activity_config_t* config)
+bool lis3dh_get_int_event_config (lis3dh_sensor_t* dev,
+                                  lis3dh_int_event_config_t* config,
+                                  lis3dh_int_signals_t signal)
 {
     if (!dev || !config) return false;
 
@@ -674,29 +674,29 @@ bool lis3dh_get_int_activity_config (lis3dh_sensor_t* dev,
     if (intx_cfg.AOI)
     {
         if (intx_cfg.SIXD && d4d_int)
-            config->activity = lis3dh_4d_position;
+            config->mode = lis3dh_4d_position;
         else if (intx_cfg.SIXD && !d4d_int)
-            config->activity = lis3dh_6d_position;
+            config->mode = lis3dh_6d_position;
         else
-            config->activity = lis3dh_free_fall;
+            config->mode = lis3dh_free_fall;
     }
     else
     {
         if (intx_cfg.SIXD && d4d_int)
-            config->activity = lis3dh_4d_movement;
+            config->mode = lis3dh_4d_movement;
         else if (intx_cfg.SIXD && !d4d_int)
-            config->activity = lis3dh_6d_movement;
+            config->mode = lis3dh_6d_movement;
         else
-            config->activity = lis3dh_wake_up;
+            config->mode = lis3dh_wake_up;
     }
 
     return true;
 }
 
 
-bool lis3dh_get_int_activity_source (lis3dh_sensor_t* dev,
-                                     lis3dh_int_activity_source_t* source, 
-                                     lis3dh_int_signals_t signal)
+bool lis3dh_get_int_event_source (lis3dh_sensor_t* dev,
+                                  lis3dh_int_event_source_t* source, 
+                                  lis3dh_int_signals_t signal)
 {
     if (!dev || !source) return false;
 
@@ -787,8 +787,8 @@ bool lis3dh_get_int_data_source (lis3dh_sensor_t* dev,
 
 
 bool lis3dh_set_int_click_config (lis3dh_sensor_t* dev,
-                                  lis3dh_int_signals_t signal,
-                                  lis3dh_int_click_config_t* config)
+                                  lis3dh_int_click_config_t* config,
+                                  lis3dh_int_signals_t signal)
 {
     if (!dev || !config) return false;
 
@@ -834,8 +834,8 @@ bool lis3dh_set_int_click_config (lis3dh_sensor_t* dev,
 }
 
 bool lis3dh_get_int_click_config (lis3dh_sensor_t* dev,
-                                  lis3dh_int_signals_t signal,
-                                  lis3dh_int_click_config_t* config)
+                                  lis3dh_int_click_config_t* config,
+                                  lis3dh_int_signals_t signal)
 {
     if (!dev || !config) return false;
 

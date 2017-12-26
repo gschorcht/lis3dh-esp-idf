@@ -167,7 +167,7 @@ bool lis3dh_new_data (lis3dh_sensor_t* dev);
 
 
 /**
- * @brief   Get one sample of sensor data as floating point values (unit 1g)
+ * @brief   Get one sample of sensor data as floating point values (unit g)
  *
  * Function works only in bypass mode and fails in FIFO modes. In FIFO modes,
  * function *lis3dh_get_float_data_fifo* has to be used instead to get data.
@@ -220,43 +220,47 @@ uint8_t lis3dh_get_raw_data_fifo (lis3dh_sensor_t* dev,
                                    
 
 /**
- * @brief   Set configuration for activity (inertial) interrupt INT1/INT2 
+ * @brief   Set configuration of an inertial interrupt generator INT1/INT2 
  *
- * Set the configuration for interrupts that are generated when a certain
- * acceleration is higher or lower than defined threshold and one of the 
- * following activities are recognized: wake-up, free fall or 6D/4D
- * orientation detection 
+ * Inertial interrupt generators produce interrupts when certain inertial event
+ * occures (event interrupts), that is, the acceleration of defined axes is
+ * higher or lower than a defined threshold and one of the following event is
+ * recognized: axes movement wake-up, free fall or 6D/4D orientation detection.
+ *
+ * The Interrupt generator is automatically activated when one of the inertial
+ * event interrupt sources in the configuration is enabled. It is deactivated
+ * if none of the inertial event interrupt sources is enabled in configuration.
  *
  * @param   dev      pointer to the sensor device data structure
- * @param   signal   specifies the interrupt signal used in function
  * @param   config   configuration for the specified interrupt signal
+ * @param   signal   specifies the interrupt signal used in function
  * @return           true on success, false on error
  */
-bool lis3dh_set_int_activity_config (lis3dh_sensor_t* dev,
-                                     lis3dh_int_signals_t signal,
-                                     lis3dh_int_activity_config_t* config);
+bool lis3dh_set_int_event_config (lis3dh_sensor_t* dev,
+                                  lis3dh_int_event_config_t* config,
+                                  lis3dh_int_signals_t signal);
 
 
 /**
- * @brief   Get cofiguration for activity (inertial) interrupt INT1/INT2
+ * @brief   Get cofiguration of an inertial interrupt generator for INT1/INT2
  *
- * Get the configuration for interrupts that are generated when a certain
- * acceleration is higher or lower than defined threshold and one of the 
- * following activities is recognized: wake-up, free fall or 6D/4D orientation
- * detection 
+ * Inertial interrupt generators produce interrupts when certain inertial event
+ * occures (event interrupts), that is, the acceleration of defined axes is
+ * higher or lower than a defined threshold and one of the following event is
+ * recognized: axes movement or 6D/4D orientation detection.
  *
  * @param   dev      pointer to the sensor device data structure
- * @param   signal   specifies the interrupt signal used in function
  * @param   config   configuration for the specified interrupt signal
+ * @param   signal   specifies the interrupt signal used in function
  * @return           true on success, false on error
  */
-bool lis3dh_get_int_activity_config (lis3dh_sensor_t* dev,
-                                     lis3dh_int_signals_t signal,
-                                     lis3dh_int_activity_config_t* config);
+bool lis3dh_get_int_event_config (lis3dh_sensor_t* dev,
+                                  lis3dh_int_event_config_t* config,
+                                  lis3dh_int_signals_t signal);
 
 
 /**
- * @brief   Get the source of the activity (inertial) interrupt INT1/INT2
+ * @brief   Get the source of an inertial event interrupt INT1/INT2
  *
  * Returns a byte with flags that indicate the activity which triggered
  * the interrupt signal (see INTx_SRC register in datasheet for details)
@@ -266,13 +270,13 @@ bool lis3dh_get_int_activity_config (lis3dh_sensor_t* dev,
  * @param   signal   specifies the interrupt signal used in function
  * @return           true on success, false on error
  */
-bool lis3dh_get_int_activity_source (lis3dh_sensor_t* dev,
-                                     lis3dh_int_activity_source_t* source, 
-                                     lis3dh_int_signals_t signal);
+bool lis3dh_get_int_event_source (lis3dh_sensor_t* dev,
+                                  lis3dh_int_event_source_t* source, 
+                                  lis3dh_int_signals_t signal);
 
 
 /**
- * @brief   Enable/disable an data interrupt on signal INT1
+ * @brief   Enable/disable a data interrupt on signal INT1
  *
  * Enables or diables interrupts that are generated either when data are 
  * ready to read or FIFO activities like overrun an watermark happen.
@@ -287,7 +291,7 @@ bool lis3dh_enable_int_data (lis3dh_sensor_t* dev,
                                    
 
 /**
- * @brief   Get the source of the data interrupt on signal INT1
+ * @brief   Get the source of a data interrupt on signal INT1
  *
  * @param   dev      pointer to the sensor device data structure
  * @param   source   pointer to the interrupt source
@@ -304,13 +308,13 @@ bool lis3dh_get_int_data_source (lis3dh_sensor_t* dev,
  * double clicks are detected.
  *
  * @param   dev      pointer to the sensor device data structure
- * @param   signal   specifies the interrupt signal used in function
  * @param   config   configuration for the specified interrupt signal
+ * @param   signal   specifies the interrupt signal used in function
  * @return           true on success, false on error
  */
 bool lis3dh_set_int_click_config (lis3dh_sensor_t* dev,
-                                  lis3dh_int_signals_t signal,
-                                  lis3dh_int_click_config_t* config);
+                                  lis3dh_int_click_config_t* config,
+                                  lis3dh_int_signals_t signal);
 
 /**
  * @brief   Set configuration for click detection interrupt INT1/INT2 
@@ -319,13 +323,13 @@ bool lis3dh_set_int_click_config (lis3dh_sensor_t* dev,
  * double clicks are detected.
  *
  * @param   dev      pointer to the sensor device data structure
- * @param   signal   specifies the interrupt signal used in function
  * @param   config   configuration for the specified interrupt signal
+ * @param   signal   specifies the interrupt signal used in function
  * @return           true on success, false on error
  */
 bool lis3dh_get_int_click_config (lis3dh_sensor_t* dev,
-                                  lis3dh_int_signals_t signal,
-                                  lis3dh_int_click_config_t* config);
+                                  lis3dh_int_click_config_t* config,
+                                  lis3dh_int_signals_t signal);
 
 
 /**
@@ -395,9 +399,8 @@ bool lis3dh_set_hpf_ref (lis3dh_sensor_t* dev, int8_t ref);
  */
 int8_t lis3dh_get_hpf_ref (lis3dh_sensor_t* dev);
 
-
 /**
- * @brief   Enable / disable ADC or temperatury sensor
+ * @brief   Enable / disable ADC or temperature sensor
  *
  * @param   dev      pointer to the sensor device data structure
  * @param   enable   if true, ADC inputs are enabled 
@@ -418,6 +421,7 @@ int8_t lis3dh_enable_adc (lis3dh_sensor_t* dev, bool enable, bool temp);
  */
 bool lis3dh_get_adc (lis3dh_sensor_t* dev,
                      uint16_t* adc1, uint16_t* adc2, uint16_t* adc3);
+
 
 // ---- Low level interface functions -----------------------------
 

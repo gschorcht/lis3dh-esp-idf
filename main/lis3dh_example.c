@@ -30,13 +30,13 @@
 
 /* -- use following constants to define the example mode ----------- */
 
-// #define SPI_USED     // if defined SPI is used, otherwise I2C
-// #define DATA_INT     // data ready and FIFO status interrupts
-// #define CLICK_INT    // click detection interrupt
-// #define ACTIVITY_INT // wake-up, free fall or 6D/4D orientation detection 
+// #define SPI_USED     // SPI interface is used, otherwise I2C
+// #define INT_DATA     // data ready and FIFO status interrupts
+// #define INT_CLICK    // click detection interrupt
+// #define INT_EVENT    // wake-up, free fall or 6D/4D orientation detection 
 // #define FIFO_MODE    // multiple sample read mode
 
-#if defined(DATA_INT) || defined(ACTIVITY_INT) || defined(CLICK_INT)
+#if defined(INT_DATA) || defined(INT_EVENT) || defined(INT_CLICK)
 #define INT_USED
 #endif
 
@@ -146,17 +146,17 @@ void user_task_interrupt (void *pvParameters)
     {
         if (xQueueReceive(gpio_evt_queue, &gpio_num, portMAX_DELAY))
         {
-            lis3dh_int_activity_source_t activity_src;
-            lis3dh_int_data_source_t     data_src;
-            lis3dh_int_click_source_t    click_src;
+            lis3dh_int_data_source_t  data_src;
+            lis3dh_int_event_source_t event_src;
+            lis3dh_int_click_source_t click_src;
 
             // get the source of the interrupt and reset INT signals
-            lis3dh_get_int_activity_source (sensor, &activity_src, lis3dh_int1_signal);
-            lis3dh_get_int_data_source     (sensor, &data_src);
-            lis3dh_get_int_click_source    (sensor, &click_src);
+            lis3dh_get_int_event_source (sensor, &event_src, lis3dh_int1_signal);
+            lis3dh_get_int_data_source  (sensor, &data_src);
+            lis3dh_get_int_click_source (sensor, &click_src);
     
-            // in case of DRDY interrupt or activity interrupt read one data sample
-            if (data_src.data_ready || activity_src.active)
+            // in case of DRDY interrupt or inertial event interrupt read one data sample
+            if (data_src.data_ready || event_src.active)
                 read_data ();
    
             // in case of FIFO interrupts read the whole FIFO
@@ -260,7 +260,7 @@ void user_init(void)
         // set polarity of INT signals if necessary
         // lis3dh_config_int_signals (sensor, lis3dh_high_active);
 
-        #ifdef DATA_INT
+        #ifdef INT_DATA
         // enable data interrupts on INT1 (data ready or FIFO status interrupts)
         // data ready and FIFO status interrupts must not be enabled at the same time
         #ifdef FIFO_MODE
@@ -269,32 +269,32 @@ void user_init(void)
         #else
         lis3dh_enable_int_data (sensor, lis3dh_data_ready, true);
         #endif // FIFO_MODE
-        #endif // DATA_INT
+        #endif // INT_DATA
         
-        #ifdef ACTIVITY_INT
+        #ifdef INT_EVENT
         // enable data interrupts on INT1 
-        lis3dh_int_activity_config_t act_config;
+        lis3dh_int_event_config_t event_config;
     
-        act_config.activity = lis3dh_wake_up;
-        // act_config.activity = lis3dh_free_fall;
-        // act_config.activity = lis3dh_6d_movement;
-        // act_config.activity = lis3dh_6d_position;
-        // act_config.activity = lis3dh_4d_movement;
-        // act_config.activity = lis3dh_4d_position;
-        act_config.threshold = 10;
-        act_config.x_low_enabled  = false;
-        act_config.x_high_enabled = true;
-        act_config.y_low_enabled  = false;
-        act_config.y_high_enabled = true;
-        act_config.z_low_enabled  = false;
-        act_config.z_high_enabled = true;
-        act_config.duration = 0;
-        act_config.latch = true;
+        event_config.mode = lis3dh_wake_up;
+        // event_config.mode = lis3dh_free_fall;
+        // event_config.mode = lis3dh_6d_movement;
+        // event_config.mode = lis3dh_6d_position;
+        // event_config.mode = lis3dh_4d_movement;
+        // event_config.mode = lis3dh_4d_position;
+        event_config.threshold = 10;
+        event_config.x_low_enabled  = false;
+        event_config.x_high_enabled = true;
+        event_config.y_low_enabled  = false;
+        event_config.y_high_enabled = true;
+        event_config.z_low_enabled  = false;
+        event_config.z_high_enabled = true;
+        event_config.duration = 0;
+        event_config.latch = true;
         
-        lis3dh_set_int_activity_config (sensor, lis3dh_int1_signal, &act_config);
-        #endif // ACTIVITY_INT
+        lis3dh_set_int_event_config (sensor, &event_config, lis3dh_int1_signal);
+        #endif // INT_EVENT
 
-        #ifdef CLICK_INT
+        #ifdef INT_CLICK
         // enable click interrupt on INT1
         lis3dh_int_click_config_t click_config;
         
@@ -310,8 +310,8 @@ void user_init(void)
         click_config.time_latency = 1;
         click_config.time_window  = 3;
         
-        lis3dh_set_int_click_config (sensor, lis3dh_int1_signal, &click_config);
-        #endif // CLICK_INT
+        lis3dh_set_int_click_config (sensor, &click_config, lis3dh_int1_signal);
+        #endif // INT_CLICK
 
         #ifdef FIFO_MODE
         // clear FIFO and activate FIFO mode if needed

@@ -242,10 +242,10 @@ void user_task_periodic (void *pvParameters)
 The LIS3DH supports two dedicated interrupt signals **```INT1```** and **```INT2```** and three different types of interrupts:
 
 - data ready and FIFO status interrupts,
-- activity detection interrupts like wake-up, free fall, and 6D/4D orientation detection, and
+- inertial event interrupts like wake-up, free fall, and 6D/4D orientation detection, and
 - click detection interrupts.
 
-While activity detection and click detection interrupts can be configured for both interrupt signals, data ready and FIFO status interrupts can be configured only for interrupt signal ```INT1```.
+While inertial event interrupts and click detection interrupts can be configured for both interrupt signals, data ready and FIFO status interrupts can be configured only for interrupt signal ```INT1```.
 
 #### Data ready and FIFO status interrupts
 
@@ -284,54 +284,54 @@ void int1_handler ()
 }
 ```
 
-#### Activity detection interrupts
+#### Inertial event interrupts
 
-Activity detection allows to generate interrupts whenever a configured condition occur. If activated, the acceleration of each axis is compared with a defined threshold to check whether it is below or above the threshold. The results of all activated comparisons are then combined OR or AND to generate the interrupt signal.
+Inertial interrupt generators allow to generate interrupts when certain inertial event occures (event interrupts), that is, the acceleration of defined axes is higher or lower than a defined threshold. If activated, the acceleration of each axis is compared with a defined threshold to check whether it is below or above the threshold. The results of all activated comparisons are then combined OR or AND to generate the interrupt signal.
 
-The configuration of the threshold valid for all axes, the activated comparisons and the selected AND/OR combination allows to recognize special situations:
+The configuration of the threshold is valid for all axes, the activated comparisons and the selected AND/OR combination allows to recognize special situations:
 
 - **Wake-up detection** refers the special condition that the acceleration measured along any axis is above the defined threshold (```lis3dh_wake_up```).
 - **Free fall detection** refers the special condition that the acceleration measured along all the axes goes to zero (```lis3dh_free_fall```).
 - **6D/4D Orientation Detection** refers to the special condition that the measured acceleration along certain axes is above and along the other axes is below the threshold which indicates a particular orientation (```lis3dh_6d_movement```, ```lis3dh_6d_position```, ```lis3dh_4d_movement```, ```lis3dh_4d_position```).
 
-Activity detection interrupts can be configured with the function ```lis3dh_get_int_activity_config```. This function requires as parameters the configuration of type ```lis3dh_int_activity_config_t``` and the interrupt signal to be used for activity detection interrupts.
+Inertial event interrupts can be configured with the function ```lis3dh_get_int_event_config```. This function requires as parameters the configuration of type ```lis3dh_int_event_config_t``` and the interrupt signal to be used for inertial event interrupts.
 
 For example, wake-up detection interrupt on signal ```INT1``` could be configured as following:
 
 ```
-lis3dh_int_activity_config_t act_config;
+lis3dh_int_event_config_t event_config;
     
-act_config.activity = lis3dh_wake_up;
-act_config.threshold = 10;
-act_config.x_low_enabled  = false;
-act_config.x_high_enabled = true;
-act_config.y_low_enabled  = false;
-act_config.y_high_enabled = true;
-act_config.z_low_enabled  = false;
-act_config.z_high_enabled = true;
+event_config.mode = lis3dh_wake_up;
+event_config.threshold = 10;
+event_config.x_low_enabled  = false;
+event_config.x_high_enabled = true;
+event_config.y_low_enabled  = false;
+event_config.y_high_enabled = true;
+event_config.z_low_enabled  = false;
+event_config.z_high_enabled = true;
 
-act_config.duration = 0;
-act_config.latch = true;
+event_config.duration = 0;
+event_config.latch = true;
         
-lis3dh_set_int_activity_config (sensor, lis3dh_int1_signal, &act_config);
+lis3dh_set_int_event_config (sensor, &event_config, lis3dh_int1_signal;
  ```
 
-The parameter of type ```lis3dh_int_activity_config_t``` also configures
+The parameter of type ```lis3dh_int_event_config_t``` also configures
 
-- whether the interrupt signal should latched until the interrupt source is read, and 
+- whether the interrupt signal should be latched until the interrupt source is read, and 
 - which time in 1/ODR an interrupt condition has to be given before the interrupt is generated.
 
-As with data ready and FIFO status interrupts, function ```lis3dh_get_int_activity_source``` can be used to determine the source of an activity interrupt whenever it is generated. This function returns a data structure of type ```lis3dh_int_activity_source_t``` which contains a boolean member for each source that can be tested for true.
+As with data ready and FIFO status interrupts, function ```lis3dh_get_int_event_source``` can be used to determine the source of an inertial event interrupt whenever it is generated. This function returns a data structure of type ```lis3dh_int_event_source_t``` which contains a boolean member for each source that can be tested for true.
 
 ```
 void int1_handler ()
 {
-    lis3dh_int_data_source_t     data_src;
-    lis3dh_int_activity_source_t activity_src;
+    lis3dh_int_data_source_t  data_src;
+    lis3dh_int_event_source_t event_src;
 
     // get interrupt source of INT1
-    lis3dh_get_int_data_source     (sensor, &data_src);
-    lis3dh_get_int_activity_source (sensor, &activity_src, lis3dh_int1_signal);
+    lis3dh_get_int_data_source  (sensor, &data_src);
+    lis3dh_get_int_event_source (sensor, &event_src, lis3dh_int1_signal);
 
     // if data ready interrupt, get the results and do something with them
     if (data_src.data_ready)
@@ -341,43 +341,43 @@ void int1_handler ()
     else  if (data_src.fifo_watermark || data_src.fifo_overrun)
         // read FIFO data
 
-    // in case of activity interrupt
-    else if (activity_src.active)
+    // in case of inertial event interrupt
+    else if (event_src.active)
         // ... read data
     ...
 }
 ```
 
-**Please note** Activating all threshold comparisons and the OR combination (```lis3dh_wake_up```) is the most flexible way to deal with activity interrupts. Functions such as free fall detection and so on can then be realized by suitably combining the various interrupt sources by the user task. Following example realizes the free fall detection in user task.
+**Please note** Activating all threshold comparisons and the OR combination (```lis3dh_wake_up```) is the most flexible way to deal with inertial event interrupts. Functions such as free fall detection and so on can then be realized by suitably combining the various interrupt sources by the user task. Following example realizes the free fall detection in user task.
 
 ```
-lis3dh_int_activity_config_t act_config;
+lis3dh_int_event_config_t event_config;
     
-act_config.activity = lis3dh_wake_up;
-act_config.threshold = 10;
-act_config.x_low_enabled  = true;
-act_config.x_high_enabled = true;
-act_config.y_low_enabled  = true;
-act_config.y_high_enabled = true;
-act_config.z_low_enabled  = true;
-act_config.z_high_enabled = true;
+event_config.mode = lis3dh_wake_up;
+event_config.threshold = 10;
+event_config.x_low_enabled  = true;
+event_config.x_high_enabled = true;
+event_config.y_low_enabled  = true;
+event_config.y_high_enabled = true;
+event_config.z_low_enabled  = true;
+event_config.z_high_enabled = true;
 
-act_config.duration = 0;
-act_config.latch = true;
+event_config.duration = 0;
+event_config.latch = true;
         
-lis3dh_set_int_activity_config (sensor, lis3dh_int1_signal, &act_config);
+lis3dh_set_int_event_config (sensor, &event_config, lis3dh_int1_signal);
 ```
 
 ```
 void int1_handler ()
 {
-    lis3dh_int_activity_source_t activity_src;
+    lis3dh_int_event_source_t event_src;
 
     // get interrupt source of INT1
-    lis3dh_get_int_activity_source (sensor, &activity_src, lis3dh_int1_signal);
+    lis3dh_get_int_event_source (sensor, &event_src, lis3dh_int1_signal);
 
     // detect free fall (all accelerations are below the threshold)
-    if (activity_src.x_low && activity_src.y_low && activity_src.z_low)
+    if (event_src.x_low && event_src.y_low && event_src.z_low)
         ... 
     ...
 }
@@ -690,15 +690,13 @@ lis3dh_set_mode (sensor, lis3dh_odr_10, lis3dh_high_res, true, true, true);
 ## Full Example
 
 ```
-/* -- use following constants to define the example mode ----------- */
-
-// #define SPI_USED     // if defined SPI is used, otherwise I2C
-   #define DATA_INT     // data ready and FIFO status interrupts
-// #define CLICK_INT    // click detection interrupt
-// #define ACTIVITY_INT // wake-up, free fall or 6D/4D orientation detection 
+// #define SPI_USED     // SPI interface is used, otherwise I2C
+// #define INT_DATA     // data ready and FIFO status interrupts
+// #define INT_CLICK    // click detection interrupt
+// #define INT_EVENT    // wake-up, free fall or 6D/4D orientation detection 
 // #define FIFO_MODE    // multiple sample read mode
 
-#if defined(DATA_INT) || defined(ACTIVITY_INT) || defined(CLICK_INT)
+#if defined(INT_DATA) || defined(INT_EVENT) || defined(INT_CLICK)
 #define INT_USED
 #endif
 
@@ -744,7 +742,7 @@ lis3dh_set_mode (sensor, lis3dh_odr_10, lis3dh_high_res, true, true, true);
 #define INT1_PIN      5
 #define INT2_PIN      4
 
-/* -- user tasks ---------------------------------------------- */
+/* -- user tasks --------------------------------------------------- */
 
 static lis3dh_sensor_t* sensor;
 
@@ -802,23 +800,23 @@ static QueueHandle_t gpio_evt_queue = NULL;
 
 void user_task_interrupt (void *pvParameters)
 {
-    uint32_t gpio_num;
+    uint8_t gpio_num;
 
     while (1)
     {
         if (xQueueReceive(gpio_evt_queue, &gpio_num, portMAX_DELAY))
         {
-            lis3dh_int_activity_source_t activity_src;
-            lis3dh_int_data_source_t     data_src;
-            lis3dh_int_click_source_t    click_src;
+            lis3dh_int_data_source_t  data_src;
+            lis3dh_int_event_source_t event_src;
+            lis3dh_int_click_source_t click_src;
 
             // get the source of the interrupt and reset INT signals
-            lis3dh_get_int_activity_source (sensor, &activity_src, lis3dh_int1_signal);
-            lis3dh_get_int_data_source     (sensor, &data_src);
-            lis3dh_get_int_click_source    (sensor, &click_src);
+            lis3dh_get_int_event_source (sensor, &event_src, lis3dh_int1_signal);
+            lis3dh_get_int_data_source  (sensor, &data_src);
+            lis3dh_get_int_click_source (sensor, &click_src);
     
-            // in case of DRDY interrupt or activity interrupt read one data sample
-            if (data_src.data_ready || activity_src.active)
+            // in case of DRDY interrupt or inertial event interrupt read one data sample
+            if (data_src.data_ready || event_src.active)
                 read_data ();
    
             // in case of FIFO interrupts read the whole FIFO
@@ -862,7 +860,7 @@ void user_task_periodic(void *pvParameters)
 
 #endif // INT_USED
 
-/* -- main program ---------------------------------------------- */
+/* -- main program ------------------------------------------------- */
 
 void user_init(void)
 {
@@ -922,7 +920,7 @@ void user_init(void)
         // set polarity of INT signals if necessary
         // lis3dh_config_int_signals (sensor, lis3dh_high_active);
 
-        #ifdef DATA_INT
+        #ifdef INT_DATA
         // enable data interrupts on INT1 (data ready or FIFO status interrupts)
         // data ready and FIFO status interrupts must not be enabled at the same time
         #ifdef FIFO_MODE
@@ -931,32 +929,32 @@ void user_init(void)
         #else
         lis3dh_enable_int_data (sensor, lis3dh_data_ready, true);
         #endif // FIFO_MODE
-        #endif // DATA_INT
+        #endif // INT_DATA
         
-        #ifdef ACTIVITY_INT
+        #ifdef INT_EVENT
         // enable data interrupts on INT1 
-        lis3dh_int_activity_config_t act_config;
+        lis3dh_int_event_config_t event_config;
     
-        act_config.activity = lis3dh_wake_up;
-        // act_config.activity = lis3dh_free_fall;
-        // act_config.activity = lis3dh_6d_movement;
-        // act_config.activity = lis3dh_6d_position;
-        // act_config.activity = lis3dh_4d_movement;
-        // act_config.activity = lis3dh_4d_position;
-        act_config.threshold = 10;
-        act_config.x_low_enabled  = false;
-        act_config.x_high_enabled = true;
-        act_config.y_low_enabled  = false;
-        act_config.y_high_enabled = true;
-        act_config.z_low_enabled  = false;
-        act_config.z_high_enabled = true;
-        act_config.duration = 0;
-        act_config.latch = true;
+        event_config.mode = lis3dh_wake_up;
+        // event_config.mode = lis3dh_free_fall;
+        // event_config.mode = lis3dh_6d_movement;
+        // event_config.mode = lis3dh_6d_position;
+        // event_config.mode = lis3dh_4d_movement;
+        // event_config.mode = lis3dh_4d_position;
+        event_config.threshold = 10;
+        event_config.x_low_enabled  = false;
+        event_config.x_high_enabled = true;
+        event_config.y_low_enabled  = false;
+        event_config.y_high_enabled = true;
+        event_config.z_low_enabled  = false;
+        event_config.z_high_enabled = true;
+        event_config.duration = 0;
+        event_config.latch = true;
         
-        lis3dh_set_int_activity_config (sensor, lis3dh_int1_signal, &act_config);
-        #endif // ACTIVITY_INT
+        lis3dh_set_int_event_config (sensor, &event_config, lis3dh_int1_signal);
+        #endif // INT_EVENT
 
-        #ifdef CLICK_INT
+        #ifdef INT_CLICK
         // enable click interrupt on INT1
         lis3dh_int_click_config_t click_config;
         
@@ -972,8 +970,8 @@ void user_init(void)
         click_config.time_latency = 1;
         click_config.time_window  = 3;
         
-        lis3dh_set_int_click_config (sensor, lis3dh_int1_signal, &click_config);
-        #endif // CLICK_INT
+        lis3dh_set_int_click_config (sensor, &click_config, lis3dh_int1_signal);
+        #endif // INT_CLICK
 
         #ifdef FIFO_MODE
         // clear FIFO and activate FIFO mode if needed
