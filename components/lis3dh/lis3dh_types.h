@@ -115,13 +115,55 @@ typedef enum {
     lis3dh_int1_signal = 0,
     lis3dh_int2_signal = 1    
 
-} lis3dh_int_signals_t;
+} lis3dh_int_signal_t;
  
  
 /**
+ * @brief   Inertial event interrupt generators
+ */
+typedef enum {
+
+    lis3dh_int_event1_gen = 0,
+    lis3dh_int_event2_gen = 1    
+
+} lis3dh_int_event_gen_t;
+
+
+/**
+ * @brief   Interrupt types for interrupt signals INT1/INT2
+ */
+typedef enum {
+
+    lis3dh_int_data_ready,     // data ready for read interrupt (only INT1)
+
+    lis3dh_int_fifo_watermark, // FIFO exceeds the threshold (only INT1)
+    lis3dh_int_fifo_overrun,   // FIFO is completely filled (only INT1)
+    
+    lis3dh_int_event1,         // inertial event interrupt 1
+    lis3dh_int_event2,         // inertial event interrupt 2
+
+    lis3dh_int_click           // click detection interrupt
+    
+} lis3dh_int_type_t;
+
+
+/**
+ * @brief   Data ready and FIFO status interrupt source for INT1
+ */
+typedef struct {
+
+    bool data_ready;      // true when acceleration data are ready to read
+
+    bool fifo_watermark;  // true when FIFO exceeds the FIFO threshold
+    bool fifo_overrun;    // true when FIFO is completely filled
+    
+} lis3dh_int_data_source_t;
+
+
+/**
  * @brief   Inertial interrupt generator configuration for INT1/INT2
  *
- * Inertial evenets are: axes movement wake-up, free-fall, 6D/4D detection.
+ * Inertial events are: wake-up, free-fall, 6D/4D detection.
  */
 typedef struct {
 
@@ -174,30 +216,6 @@ typedef struct {
     bool    z_high:1;     // true - z higher than threshold event
     
 } lis3dh_int_event_source_t;
-
-
-/**
- * @brief   Data interrupt types for INT1 signal
- */
-typedef enum {
-
-    lis3dh_data_ready,     // interrupt when data are ready to read
-    lis3dh_fifo_watermark, // interrupt when FIFO exceeds the FIFO threshold
-    lis3dh_fifo_overrun    // interrupt when FIFO is completely filled
-
-} lis3dh_int_data_t;
-
-
-/**
- * @brief   Data interrupt source type for INT1 signal
- */
-typedef struct {
-
-    bool data_ready;        // true when data are ready to read
-    bool fifo_watermark;    // true when FIFO exceeds the FIFO threshold
-    bool fifo_overrun;      // true when FIFO is completely filled
-    
-} lis3dh_int_data_source_t;
 
 
 /**
